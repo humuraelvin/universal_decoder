@@ -1,0 +1,30 @@
+name: Mark FAQ answers
+
+'on':
+  workflow_dispatch:
+    inputs:
+      comment_id_1:
+        description: First discussion comment node ID
+        required: true
+      comment_id_2:
+        description: Second discussion comment node ID
+        required: true
+
+permissions:
+  discussions: write
+
+jobs:
+  mark-answers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark answers accepted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT_ID_1: ${{ inputs.comment_id_1 }}
+          COMMENT_ID_2: ${{ inputs.comment_id_2 }}
+        run: |
+          mark_answer() {
+            gh api graphql               -f id="$1"               -f query='mutation($id: ID!) { markDiscussionCommentAsAnswer(input: {id: $id}) { discussion { url } } }'
+          }
+          mark_answer "$COMMENT_ID_1"
+          mark_answer "$COMMENT_ID_2"
