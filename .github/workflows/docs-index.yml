@@ -1,6 +1,6 @@
 name: Generate documentation index
 
-on:
+'on':
   workflow_dispatch:
 
 permissions:
@@ -25,8 +25,7 @@ jobs:
               base="${path##*/}"
               label="${base%.md}"
               label="${label//-/ }"
-              printf -- '- [%s](../%s)
-' "$label" "${path#docs/}"
+              echo "- [$label](../${path#docs/})"
             done
           } > docs/automation/generated-index.md
 
