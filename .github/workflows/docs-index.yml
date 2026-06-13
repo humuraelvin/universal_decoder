@@ -1,0 +1,54 @@
+name: Generate documentation index
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build docs index
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          docs = Path('docs')
+          out_path = docs / 'automation' / 'generated-index.md'
+          out_path.parent.mkdir(parents=True, exist_ok=True)
+          files = sorted(
+              p for p in docs.rglob('*.md')
+              if p.as_posix() != out_path.as_posix()
+          )
+          lines = [
+              '# Documentation Index',
+              '',
+              'Generated from the Markdown files in the `docs/` folder.',
+              '',
+          ]
+          for path in files:
+              label = path.stem.replace('-', ' ').title()
+              rel = '../' + path.as_posix().removeprefix('docs/')
+              lines.append(f'- [{label}]({rel})')
+          out_path.write_text('
+'.join(lines) + '
+', encoding='utf-8')
+          PY
+
+      - name: Open generated-index pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COAUTHOR: HUMURA ELVIN <148461063+humuraelvin@users.noreply.github.com>
+        run: |
+          branch="automation/docs-index-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add docs/automation/generated-index.md
+          git commit -m "docs: generate documentation index" -m "Co-authored-by: $COAUTHOR"
+          git push --set-upstream origin "$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --title "docs: generate documentation index" --body "Generated a docs index from the repository documentation folder." --base main --head "$branch"
