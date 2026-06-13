@@ -15,29 +15,20 @@ jobs:
 
       - name: Build docs index
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          docs = Path('docs')
-          out_path = docs / 'automation' / 'generated-index.md'
-          out_path.parent.mkdir(parents=True, exist_ok=True)
-          files = sorted(
-              p for p in docs.rglob('*.md')
-              if p.as_posix() != out_path.as_posix()
-          )
-          lines = [
-              '# Documentation Index',
-              '',
-              'Generated from the Markdown files in the `docs/` folder.',
-              '',
-          ]
-          for path in files:
-              label = path.stem.replace('-', ' ').title()
-              rel = '../' + path.as_posix().removeprefix('docs/')
-              lines.append(f'- [{label}]({rel})')
-          out_path.write_text('
-'.join(lines) + '
-', encoding='utf-8')
-          PY
+          mkdir -p docs/automation
+          {
+            echo "# Documentation Index"
+            echo
+            echo 'Generated from the Markdown files in the `docs/` folder.'
+            echo
+            find docs -type f -name '*.md' ! -path 'docs/automation/generated-index.md' | sort | while IFS= read -r path; do
+              base="${path##*/}"
+              label="${base%.md}"
+              label="${label//-/ }"
+              printf -- '- [%s](../%s)
+' "$label" "${path#docs/}"
+            done
+          } > docs/automation/generated-index.md
 
       - name: Open generated-index pull request
         env:
