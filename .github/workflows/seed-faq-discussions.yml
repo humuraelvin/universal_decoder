@@ -1,0 +1,34 @@
+name: Seed FAQ discussions
+
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  discussions: write
+
+jobs:
+  seed-faq:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create FAQ discussions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo_json=$(gh api graphql             -f owner="$GITHUB_REPOSITORY_OWNER"             -f name="${GITHUB_REPOSITORY#*/}"             -f query='query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { id discussionCategories(first: 50) { nodes { id slug isAnswerable } } } }')
+          repo_id=$(echo "$repo_json" | jq -r '.data.repository.id')
+          category_id=$(echo "$repo_json" | jq -r '.data.repository.discussionCategories.nodes[] | select(.isAnswerable == true) | .id' | head -n 1)
+          if [ -z "$category_id" ] || [ "$category_id" = "null" ]; then
+            echo "No answerable discussion category found."
+            exit 1
+          fi
+
+          create_discussion() {
+            local title="$1"
+            local body="$2"
+            gh api graphql               -f repositoryId="$repo_id"               -f categoryId="$category_id"               -f title="$title"               -f body="$body"               -f query='mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) { createDiscussion(input: {repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body}) { discussion { url } } }'
+          }
+
+          create_discussion             "FAQ: What native libraries do the decoders need?"             "Which native system libraries are required before running the QR, barcode, Data Matrix, MaxiCode, and PDF417 decoders?"
+
+          create_discussion             "FAQ: How should Universal Decoder handle headless servers?"             "What is the safest way to run the decoder scripts on a server without an OpenCV desktop window?"
