@@ -5,7 +5,6 @@ name: Generate documentation index
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   generate-index:
@@ -29,16 +28,14 @@ jobs:
             done
           } > docs/automation/generated-index.md
 
-      - name: Open generated-index pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COAUTHOR: HUMURA ELVIN <148461063+humuraelvin@users.noreply.github.com>
+      - name: Commit docs index when changed
         run: |
-          branch="automation/docs-index-${{ github.run_id }}"
+          if git diff --quiet -- docs/automation/generated-index.md; then
+            echo "Documentation index is already current."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$branch"
           git add docs/automation/generated-index.md
-          git commit -m "docs: generate documentation index" -m "Co-authored-by: $COAUTHOR"
-          git push --set-upstream origin "$branch"
-          gh pr create --repo "$GITHUB_REPOSITORY" --title "docs: generate documentation index" --body "Generated a docs index from the repository documentation folder." --base main --head "$branch"
+          git commit -m "docs: update generated documentation index" -m "Co-authored-by: HUMURA ELVIN <148461063+humuraelvin@users.noreply.github.com>"
+          git push origin HEAD:main
